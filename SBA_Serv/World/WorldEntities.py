@@ -21,8 +21,9 @@ import sys
 from WorldCommands import RaiseShieldsCommand, CloakCommand
 from Messaging import MessageQueue
 from Commanding import CommandSystem
-from WorldMath import PlayerStat, getPositionAwayFromOtherObjects, cfg_rand_min_max
+from WorldMath import PlayerStat, getPositionAwayFromOtherObjects, cfg_rand_min_max, istypeinlist
 from Entities import PhysicalRound, PhysicalEllipse
+from pymunk import Vec2d
 
 class Ship(PhysicalRound):
     """
@@ -113,6 +114,13 @@ class Ship(PhysicalRound):
         objData["ROTATIONSPEED"] = self.rotationSpeed
         objData["CURSHIELD"] = self.shield.value
         objData["MAXSHIELD"] = self.shield.maximum
+
+        # Only show some properties to the owner of the ship
+        if player != None and hasattr(self, "player") and self.player != None and self.player.netid == player.netid:
+            objData["CMDQ"] = self.commandQueue.getRadarRepr()
+        else:
+            # Remove this property for other ships
+            del objData["CURENERGY"]
 
 class CelestialBody:
     """
@@ -366,7 +374,7 @@ class WormHole(CelestialBody, Influential, PhysicalRound):
 
     def apply_influence(self, otherobj, mapped_pos, t):
         # teleport ships, todo: cooldown check
-        if (not hasattr(otherobj, "teleported") or otherobj.teleported == False):
+        if (not hasattr(otherobj, "teleported") or otherobj.teleported == False or otherobj.teleported == self.id):
             if isinstance(otherobj, Ship):
                 otherobj.player.sound = "WORMHOLE"
 
@@ -420,7 +428,7 @@ class Asteroid(PhysicalRound):
     Asteroids are given an initial random direction and speed and will travel in that direction forever until disrupted...
     """
 
-    def __init__(self, pos, mass = None):
+    def __init__(self, pos, move_speed=30, mass = None):
         #TODO: Make Asteroids of different sizes
         if mass == None:
             mass = random.randint(1500, 3500)
@@ -431,27 +439,28 @@ class Asteroid(PhysicalRound):
         self.shape.group = 1
 
         # initial movement
-        v = random.randint(20000, 40000)
-        self.body.apply_impulse((random.randint(-1, 1) * v, random.randint(-1, 1) * v), (0,0))
+        ang = random.randint(0, 359)
+        self.body.velocity = Vec2d(math.cos(math.radians(ang)) * move_speed,
+                                   math.sin(math.radians(ang)) * move_speed)
 
     @staticmethod
     def spawn(world, cfg, pos=None):
         if pos == None:
             pos = getPositionAwayFromOtherObjects(world, cfg.getint("Asteroid", "buffer_object"), cfg.getint("Asteroid", "buffer_edge"))
-        a = Asteroid(pos)
+        a = Asteroid(pos, cfg_rand_min_max(cfg, "Asteroid", "move_speed"))
         world.append(a)
         return a
 
-class Dragon(CelestialBody, Influential, Asteroid):
+class Dragon(CelestialBody, Influential, PhysicalRound):
     """
     Dragons move around the world and may try and track a nearby player.
 
     Ships are munched on a bit when close to its mouth.
     """
-    def __init__(self, pos, attack_range=64, attack_speed=5, health=400, attack_time=(1.0, 2.0), attack_amount=(15, 25), mass = None):
+    def __init__(self, pos, attack_range=64, attack_speed=5, health=400, attack_time=(1.0, 2.0), attack_amount=(15, 25), move_speed=14, mass = None):
         if mass == None:
             mass = random.randint(3000, 5000)
-        super(Dragon, self).__init__(pos, mass)
+        super(Dragon, self).__init__(16, mass, pos)
         self.shape.elasticity = 0.8
         self.health = PlayerStat(health)
 
@@ -463,9 +472,11 @@ class Dragon(CelestialBody, Influential, Asteroid):
         self.attack_amt = attack_amount
         self._get_next_attack()
         self.target = None
+        self.see = []
         #initial movement
-        v = random.randint(12000, 18000)
-        self.body.apply_impulse((random.randint(-1, 1) * v, random.randint(-1, 1) * v), (0,0))
+        ang = random.randint(0, 359)
+        self.body.velocity = Vec2d(math.cos(math.radians(ang)) * move_speed,
+                                   math.sin(math.radians(ang)) * move_speed)
         self.lv = self.body.velocity.normalized()
 
     def _get_next_attack(self):
@@ -482,17 +493,21 @@ class Dragon(CelestialBody, Influential, Asteroid):
 
     def apply_influence(self, otherobj, mapped_pos, t):
         # get closest ship though cloak protects ship from dragon 'seeing' it
-        if isinstance(otherobj, Ship) and not otherobj.commandQueue.containstype(CloakCommand) and \
-                (self.target == None or self.body.position.get_dist_sqrd(mapped_pos) < self.body.position.get_dist_sqrd(self.target)):
-            if self.target == None:
-                if len(self.in_celestialbody) == 0:
-                    otherobj.player.sound = "RAWR"
-                if self.body.velocity.length == 0:
-                    self.body.velocity = self.lv * self.attack_speed
-                else:
-                    self.body.velocity.length += self.attack_speed
-                self.lv = self.body.velocity.normalized()
-            self.target = pymunk.Vec2d(mapped_pos)
+        if isinstance(otherobj, Ship) and not otherobj.commandQueue.containstype(CloakCommand):
+            if self.target == None or self.body.position.get_dist_sqrd(mapped_pos) < self.body.position.get_dist_sqrd(self.target[1].body.position): # TODO: Get this to be able to wrap
+                if self.target == None:
+                    if len(self.in_celestialbody) == 0:
+                        otherobj.player.sound = "RAWR"
+                    if self.body.velocity.length == 0:
+                        self.body.velocity = self.lv * self.attack_speed
+                    else:
+                        self.body.velocity.length += self.attack_speed
+                    self.lv = self.body.velocity.normalized()
+                self.target = (pymunk.Vec2d(mapped_pos), otherobj)
+            elif self.target[1] == otherobj:
+                # Update our position of our tracked object
+                self.target = (pymunk.Vec2d(mapped_pos), otherobj)
+            self.see.append(otherobj)
 
     def update(self, t):
         # Objects 'in' dragons take damage
@@ -505,15 +520,23 @@ class Dragon(CelestialBody, Influential, Asteroid):
                     obj.take_damage(self.natk[1], self)
                     self._get_next_attack()
 
+        if self.target != None and self.target[1] not in self.see:
+            self.target = None
+            if self.body.velocity.length > self.attack_speed:
+                self.body.velocity.length -= self.attack_speed * 0.9 # TODO: make this 'rage retainer' a config value???
+        self.see = []
+
         if self.target != None:
             # turn towards target
-            nang = self.body.velocity.get_angle_degrees_between(self.target - self.body.position)
+            nang = self.body.velocity.get_angle_degrees_between(self.target[0] - self.body.position)
             self.body.velocity.angle_degrees += nang * t
 
             # clear target as we'll reaquire to 'readjust course' for moving object...
-            if self.body.position.get_dist_sqrd(self.target) < 400:
+            dist = self.body.position.get_dist_sqrd(self.target[0])
+            if dist < self.radius * 1.5 and self.target[1].body.velocity.length < self.body.velocity.length or self.target[1].health <= 0:
                 if self.body.velocity.length > self.attack_speed:
                     self.body.velocity.length -= self.attack_speed
+            if dist > self.influence_range * self.influence_range * 1.1 or self.target[1].health <= 0:
                 self.target = None
 
         super(Dragon, self).update(t)
@@ -533,6 +556,7 @@ class Dragon(CelestialBody, Influential, Asteroid):
                         cfg_rand_min_max(cfg, "Dragon", "health"),
                         (cfg.getfloat("Dragon", "attack_time_min"), cfg.getfloat("Dragon", "attack_time_max")),
                         (cfg.getfloat("Dragon", "attack_amount_min"), cfg.getfloat("Dragon", "attack_amount_max")),
+                        cfg_rand_min_max(cfg, "Dragon", "move_speed")
                         )
         world.append(d)
         return d
@@ -563,7 +587,7 @@ class Torpedo(Weapon):
     def getExtraInfo(self, objData, player):
         objData["OWNERID"] = self.owner.id
 
-class SpaceMine(Influential, Weapon):
+class SpaceMine(CelestialBody, Influential, Weapon):
     """
     SpaceMines are weapons which are dropped from a ship
     """
@@ -593,17 +617,22 @@ class SpaceMine(Influential, Weapon):
         self.lv = self.body.velocity.normalized()
 
     def collide_start(self, otherobj):
+        #TODO: Test if we say False, if we ever get collide_end notification...?
+        parent = super(SpaceMine, self).collide_start(otherobj)
         if not self.active:
             return False
 
-        return super(SpaceMine, self).collide_start(otherobj)
+        return parent
 
     def update(self, t):
         super(SpaceMine, self).update(t)
         self.delay -= t
 
         if self.delay <= 0:
-            if self.mode == SpaceMine.AUTONOMOUS and not self.active:
+            if istypeinlist(Ship, self.in_celestialbody):
+                logging.info("Ship still touching mine when activated!")
+                self.TTL = self.timealive - 1
+            elif self.mode == SpaceMine.AUTONOMOUS and not self.active:
                 v = 500 * self.speed
                 self.body.apply_impulse((math.cos(math.radians(-self.direction)) * v,
                                          math.sin(math.radians(-self.direction)) * v), (0,0))
@@ -642,4 +671,17 @@ class SpaceMine(Influential, Weapon):
             self.target = pymunk.Vec2d(mapped_pos)
                                    
     def getExtraInfo(self, objData, player):
-        objData["OWNERID"] = self.owner.id
+        if self.owner != None:
+            objData["OWNERID"] = self.owner.id
+
+    @staticmethod
+    def spawn(world, cfg, pos=None):
+        if pos == None:
+            pos = getPositionAwayFromOtherObjects(world, cfg.getint("SpaceMine", "buffer_object"), cfg.getint("SpaceMine", "buffer_edge"))
+        t = random.choice(eval(cfg.get("SpaceMine", "types")))
+        if t == SpaceMine.AUTONOMOUS:
+            sm = SpaceMine(pos, cfg_rand_min_max(cfg, "SpaceMine", "delay"), t, cfg_rand_min_max(cfg, "SpaceMine", "direction"), cfg_rand_min_max(cfg, "SpaceMine", "speed"), cfg_rand_min_max(cfg, "SpaceMine", "duration"))
+        else:
+            sm = SpaceMine(pos, cfg_rand_min_max(cfg, "SpaceMine", "delay"), t)
+        world.append(sm)
+        return sm

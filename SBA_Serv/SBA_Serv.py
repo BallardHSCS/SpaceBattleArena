@@ -88,6 +88,12 @@ if __name__ == "__main__":
     if defaults:
         loaded_cfg_files = cfg.read(args)
 
+        if len(loaded_cfg_files) != len(args):
+            for file in loaded_cfg_files:
+                args.remove(file)
+            print "Issue Loading Configuration:", args
+            logging.error("Possible Config Files Not Loaded: %s", repr(args))
+
         logging.info("Loaded Configuration Files: %s", repr(loaded_cfg_files))
 
         if loaded_cfg_files == []:
@@ -136,6 +142,7 @@ if __name__ == "__main__":
                 logging.info("Running Game: " + rungame)
             except:
                 logging.error("Could not start Game " + rungame)
+                logging.info(traceback.format_exc())
                 logging.error(traceback.format_exc())
                 print traceback.format_exc()        
         #eif
@@ -153,16 +160,12 @@ if __name__ == "__main__":
 
         server = WorldServer.WorldServer(cfg.getint("Server", "port"), game)
 
-        try:
-            #if options.headless:
-                #logging.info("Running Headless without GUI")
-                #TODO: Set World Size Here?
-            #else:
-            #startGame(title, game, fullscreen:bool, (xres, yres), showstats:bool, sound:bool)
-            main.startGame(titlever + title_game, game, cfg.getboolean("Application", "fullscreen"), resolution, cfg)
-        except:
-            logging.error(traceback.format_exc())
-            print traceback.format_exc()
+        #if options.headless:
+            #logging.info("Running Headless without GUI")
+            #TODO: Set World Size Here?
+        #else:
+        #startGame(title, game, fullscreen:bool, (xres, yres), showstats:bool, sound:bool)
+        main.startGame(titlever + title_game, game, cfg.getboolean("Application", "fullscreen"), resolution, cfg)
 
         print "Sending Disconnect..."
         logging.info("Server Request Disconnect All")
