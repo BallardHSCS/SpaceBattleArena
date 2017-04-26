@@ -66,6 +66,10 @@ class WorldMathTestCases(TestCase):
         self.assertIsInstance(x[0], int, "First value not integer")
         self.assertIsInstance(x[1], int, "Second value not integer")
 
+    def test_istypeinlist(self):
+        self.assertTrue(istypeinlist(int, [5.0, "asd", 6]), "Failed to find integer.")
+        self.assertTrue(istypeinlist(Ship, ["asdfasdf", Ship((0, 0), None)]), "Failed to find ship.")
+
 class WorldTestCase(SBAGUITestCase):
     """
     Dummy test to create a planet and check it was added to the world of the game.
@@ -381,6 +385,33 @@ class WorldVisualShipRespawnTestCase(SBAGUITestCase):
 
         print ship2.body.position[0], " vs ", ship.body.position[0]
         self.failIfAlmostEqual(ship2.body.position[0], ship.body.position[0], None, "Ship Didn't get Slowed Down By Nebula", 15)
+
+    def test_energy_scoop(self):
+        """
+        Test two ships, one in Nebula and using Energy Scoop.
+        """
+        neb = Nebula(self.game.world.mid_point(100, -160), (384,256))
+        self.game.world.append(neb)
+
+        ship = AIShip_SetList("Nebula", self.game.world.mid_point(-100, -100), self.game, [
+            "ThrustCommand(self, 'B', 7.0)",
+            "IdleCommand(self, 2.0)",
+            "LowerEnergyScoopCommand(self, 1)",
+        ])        
+
+        ship2 = AIShip_SetList("Free", self.game.world.mid_point(-100, 100), self.game, [
+            "ThrustCommand(self, 'B', 7.0)",
+        ])
+        
+        ship.energy -= 50
+        ship2.energy -= 50
+
+        time.sleep(9.0)
+
+        print ship2.body.position[0], " vs ", ship.body.position[0]
+        self.failIfAlmostEqual(ship2.body.position[0], ship.body.position[0], None, "Ship Didn't get Slowed Down By Nebula", 15)
+        self.assertGreater(ship.energy.value, ship2.energy.value, "Ship didn't get extra energy")
+        self.assertAlmostEqual(ship.energy.value, 100, None, "Ship didn't regain all energy", 5)
 
     def test_ship_shoot_dragon(self):
         """
@@ -764,40 +795,40 @@ class WorldVisualShipDestroyedTestCase(SBAGUITestCase):
         self.assertAlmostEqual(ship.health.value, 50, None, "Player Health not Halved", 1)
         self.assertLess(ship.energy.value, 100, "Player Energy didn't decrease")
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health
         ship.energy.full() # replenish
         self.assertAlmostEqual(ship.health.value, 25, None, "Player Health not Halved 2", 1)
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health        
         self.assertAlmostEqual(ship.health.value, 13, None, "Player Health not Halved 3", 1)
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health
         ship.energy.full() # replenish
         self.assertAlmostEqual(ship.health.value, 7, None, "Player Health not Halved 4", 1)
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health        
         self.assertAlmostEqual(ship.health.value, 4, None, "Player Health not Halved 5", 1)
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health
         ship.energy.full() # replenish
         self.assertAlmostEqual(ship.health.value, 2, None, "Player Health not Halved 6", 1)
 
-        time.sleep(5.5)
+        time.sleep(10.5)
 
         print ship.health        
         self.assertAlmostEqual(ship.health.value, 1, None, "Player Health not Halved 7", 1)
 
-        time.sleep(6)
+        time.sleep(11)
 
         print ship.health
         self.assertFalse(ship in self.game.world, "Doomed Ship not destroyed")

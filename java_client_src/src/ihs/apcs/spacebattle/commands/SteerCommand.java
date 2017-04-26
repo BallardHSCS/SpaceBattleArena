@@ -19,7 +19,7 @@ public class SteerCommand extends ShipCommand {
 	private boolean BLOCK;
 	
 	/**
-	 * Creates a Blocking command to steer a ship.  
+	 * Creates a blocking command to steer a ship.  
 	 * @param degrees the number of degrees to adjust course
 	 */
 	public SteerCommand(int degrees) {
@@ -36,9 +36,12 @@ public class SteerCommand extends ShipCommand {
 		BLOCK = block;
 	}
 
+	/* (non-Javadoc)
+	 * @see ihs.apcs.spacebattle.commands.ShipCommand#getName()
+	 */
 	@Override
-	protected String getName() {
-		return "STEER";
+	public String getName() {
+		return CommandNames.Steer.toString();
 	}
 	
 	/**

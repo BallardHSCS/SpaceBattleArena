@@ -8,7 +8,7 @@ Space Battle Arena
 
 Space Battle Arena is a ‘[Programming Game](http://en.wikipedia.org/wiki/Programming_game)‘ where you must write code (in Java) to autonomously control a space ship to accomplish specified objectives.  
 
-<img src="{{ site.baseurl }}/img/SpaceBattleArena.png" alt="Space Battle Arena" class="right"/>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/dfMpFtCXoQM?controls=0&showinfo=0&rel=0&modestbranding=1" frameborder="0" allowfullscreen class="right"></iframe>
 
 This has been a final project used in an Advanced Placement High School Computer Science course since 2012.  Students have been enthusiastic, excited, challenged, and engaged with learning to control a ship in a physical environment and comparing strategies against their fellow students in a fun competition.
 
@@ -18,7 +18,7 @@ In addition, it means the challenge is fixed and always the same.  For an educat
 
 Finally, allowing the system to be extensible and configurable, means that challenges and difficulty can be directly geared to a specific group of students abilities which can fluctuate from class to class.  Space Battle was our test bed and has proved successful with the multiple different challenges we have run over the past few years.
 
-Space Battle Arena is [licensed](LICENSE) under the GPLv2.  [Gson](https://github.com/google/gson) is licensed under the Apache license and provided for convenience in the [bin](http://github.com/Mikeware/SpaceBattleArena/tree/master/bin/) directory.
+Space Battle Arena is [licensed](https://github.com/Mikeware/SpaceBattleArena/blob/master/LICENSE) under the GPLv2.  [Gson](https://github.com/google/gson) is licensed under the Apache license and provided for convenience alongside the release.
 
 Student Environment
 -------------------------
@@ -33,6 +33,7 @@ Documentation
     * [jGRASP](client/jGRASP/index.html)
     * [Eclipse](client/Eclipse/index.html)
     * [BlueJ](client/BlueJ/index.html)    
+    * [Command Line](client/CmdLine/index.html)
 * [Guides](client/guides/index.html)
     * [Coordinates](client/guides/space.html)
     * [Maneuvering](client/guides/maneuvering.html)
@@ -42,6 +43,7 @@ Documentation
     * [Ship Image Index](https://github.com/Mikeware/SpaceBattleArena/tree/master/SBA_Serv/GUI/Graphics/Ships)
 * [Server Information](server/index.html)
     * [Server Setup](server/setup.html)
+        * [Mac OS X Server from Source](https://github.com/Mikeware/SpaceBattleArena/blob/master/SBA_Serv/README.md)
     * [Server Config](server/config.html)
     * [Server Usage/Shortcuts](server/usage.html)
     * [Tournaments](server/tournaments.html)
@@ -56,10 +58,12 @@ Documentation
     * ['Basic' Games](games/basic.html)
         * [Find The Middle](games/findthemiddle.html)
         * [Survivor](games/survivor.html)
+            * [Dragon's Lair (Variant)](games/survivor.html#dl)
         * [Asteroid Miner](games/asteroidminer.html)
         * [Combat Exercise](games/combatexercise.html)
-    * [Hungry Hungry Baubles](games/hungryhungrybaubles.html)
+    	* [Hungry Hungry Baubles](games/hungryhungrybaubles.html)
     * [Bauble Hunt](games/baublehunt.html)
+    * [The Hunger Baubles](games/thehungerbaubles.html)
     * [King of the Bubble](games/kingofthebubble.html)
         * [King of Space (Variant)](games/kingofthebubble.html#kos)
     * [Discovery Quest](games/discoveryquest.html)

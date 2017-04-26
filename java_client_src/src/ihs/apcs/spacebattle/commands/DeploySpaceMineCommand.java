@@ -4,9 +4,9 @@ package ihs.apcs.spacebattle.commands;
  * A command to deploy a Space Mine.  Space Mines will remain inactive for a period of time.  Once active, they will explode on impact.
  * 
  * Space Mines have three modes:
- * 	Stationary (will activate after given time and remain in place), 44
- *  Autonomous (will activate, boost in the given direction and speed, and then detonate after the given period of time), 55
- *  Homing (will activate after the given time and then start tracking nearby ships), 66
+ *  Stationary (will activate after given time and remain in place) and cost 44 energy.
+ *  Autonomous (will activate, boost in the given direction and speed, and then detonate after the given period of time) and cost 55 energy.
+ *  Homing (will activate after the given time and then start tracking nearby ships) and cost 66 energy.
  * 
  * @author Michael A. Hawker
  *
@@ -39,6 +39,9 @@ public class DeploySpaceMineCommand extends ShipCommand {
 	 * @param homing does this mine home nearby ships.
 	 */
 	public DeploySpaceMineCommand(double delay, boolean homing) {
+		if (delay <= 0 || delay > 10) 
+			throw new IllegalArgumentException("Invalid mine delay: must be greater than 0 and no more than 10");
+		
 		if (homing)
 		{
 			this.MODE = 3;
@@ -59,6 +62,13 @@ public class DeploySpaceMineCommand extends ShipCommand {
 	 */
 	public DeploySpaceMineCommand(double delay, int direction, int speed, double duration)
 	{
+		if (duration <= 0 | duration > 10)
+			throw new IllegalArgumentException("Invalid mine duration: must be greater than 0 and no more than 10");
+		if (speed <= 0 || speed > 5)
+			throw new IllegalArgumentException("Invalid mine speed: must be between 1 and 5 inclusive");
+		if (delay <= 0 || delay > 10) 
+			throw new IllegalArgumentException("Invalid mine delay: must be greater than 0 and no more than 10");
+		
 		this.MODE = 2;
 		this.DELAY = delay;
 		this.DIR = direction;
@@ -66,29 +76,31 @@ public class DeploySpaceMineCommand extends ShipCommand {
 		this.DUR = duration;
 	}
 	
+	/* (non-Javadoc)
+	 * @see ihs.apcs.spacebattle.commands.ShipCommand#getName()
+	 */
 	@Override
-	protected String getName() {
-		// TODO Auto-generated method stub
-		return "MINE";
+	public String getName() {
+		return CommandNames.DeploySpaceMine.toString();
 	}
 	
 	/**
 	 * Gets the energy cost for the constructed command.
-	 * @return (44, 55, 66)
+	 * @return (33, 44, 55)
 	 */
 	public int getEnergyCost()
 	{
-		return 33 + this.MODE * 11;
+		return 22 + this.MODE * 11;
 	}
 	
 	/**
 	 * Gets the one-time energy cost to initiate this command.
-	 * @return the amount of energy consumed by initiating this command (44, 55, or 66)
+	 * @return the amount of energy consumed by initiating this command (33, 44, or 55)
 	 */
-	public static int getInitialEnergyCost() { return 44; }
+	public static int getInitialEnergyCost() { return 33; }
 	
 	/**
-	 * Deploy Space Mine executes immediately.
+	 * Deploy Space Mine executes immediately and has a cooldown of 2 seconds.
 	 * 
 	 * @return true
 	 */
