@@ -21,6 +21,7 @@ from GUI.GraphicsCache import Cache
 from GUI.Helpers import debugfont, wrapcircle, namefont
 import logging, random
 import pygame
+import math
 
 # Basic Game - Find The Middle
 # Preliminary Exercise to introduce students to the world of Space Battle
@@ -36,6 +37,8 @@ class FindTheMiddleGame(BasicGame):
         self.__objective_points = map(int, cfgobj.get("FindTheMiddle", "objective_points").split(","))
         self.__objective_time = float(cfgobj.getint("FindTheMiddle", "objective_time"))
         self.__objective_velocity = cfgobj.getint("FindTheMiddle", "objective_velocity")
+        self.__reset_timer = cfgobj.getboolean("FindTheMiddle", "reset_timer")
+        self.__collisions = cfgobj.getboolean("World", "collisions")
 
         super(FindTheMiddleGame, self).__init__(cfgobj)
 
@@ -54,14 +57,18 @@ class FindTheMiddleGame(BasicGame):
     
     def player_get_start_position(self, force=False):
         # make sure player doesn't spawn in middle
-        pos = (random.randint(50, self.world.width - 50),
-               random.randint(50, self.world.height - 50))
+        pos = self.__get_pos()
         x = 0
-        while (len(self.world.getObjectsInArea(pos, 75)) > 0 or in_circle(self.midpoint, self.__objective_radii[-1], pos)) and x < 15:
+        while self.__collisions and len(self.world.getObjectsInArea(pos, 75)) > 0 and x < 10:
             x += 1
-            pos = (random.randint(50, self.world.width - 50),
-                   random.randint(50, self.world.height - 50))
+            pos = self.__get_pos()
         return pos
+
+    def __get_pos(self):
+        ang = random.randint(0, 359)
+        dist = random.randint(self.__objective_radii[-1] + 32, random.randint(self.__objective_radii[-1] + 32, self.midpoint[0]))
+        return (min(max(32, self.midpoint[0] + math.cos(math.radians(ang)) * dist), self.world.width - 32), 
+                min(max(32, self.midpoint[1] + math.sin(math.radians(ang)) * dist), self.world.height - 32))
 
     def game_update(self, t):
         if self.round_get_has_started():
@@ -78,12 +85,14 @@ class FindTheMiddleGame(BasicGame):
                         # slowed enough, figure out how many points to give
                         x = 0
                         for radius in self.__objective_radii:
-                            if in_circle(self.midpoint, radius + 28, ship.body.position):                                
+                            if in_circle(self.midpoint, radius + 28, ship.body.position):
                                 break
                             x += 1
                         ship.body.position = self.player_get_start_position() 
-                        self.player_update_score(ship.player, self.__objective_points[x])
+                        ship.player.update_score(self.__objective_points[x])
                         ship.player.time = 0
+                elif self.__reset_timer:
+                    ship.player.time = 0
 
         super(FindTheMiddleGame, self).game_update(t)
 

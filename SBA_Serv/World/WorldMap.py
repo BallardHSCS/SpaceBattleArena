@@ -272,6 +272,7 @@ class GameWorld(object):
         except:
             print "EXCEPTION IN GAMELOOP"
             logging.exception("FATAL Error in game loop!!!")
+            logging.info(traceback.format_exc())
             logging.error(traceback.format_exc())
             print traceback.format_exc()
             self.gameerror = True
@@ -294,15 +295,17 @@ class GameWorld(object):
         return objList
 
     def get_count_of_objects(self, type):
+        tname = type.__name__
         count = 0
         for obj in self.__objects.values():
-            if isinstance(obj, type):
+            if obj.__class__.__name__ == tname:
                 count += 1
             #eif
         #next
         return count
 
     def getObjectData(self, obj, player):
+        #TODO: Move these properties to the 'getExtraInfo' of the base Entity and have child classes call super...
         objData = {}
         # Convert Type of Object to String
         objData["TYPE"] = friendly_type(obj)

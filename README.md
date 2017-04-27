@@ -19,6 +19,7 @@ Resources
     * [Client Java Docs](http://mikeware.github.io/SpaceBattleArena/client/java_doc/)
     * [Initial Guides](http://mikeware.github.io/SpaceBattleArena/client/guides/)
 * [Server Setup](http://mikeware.github.io/SpaceBattleArena/server/)
+* [Mac OS X Server from Source](https://github.com/Mikeware/SpaceBattleArena/blob/master/SBA_Serv/README.md)
 * Talks
     * [You Have Died of Dysentery: Games in Education Are Still Alive - PAXDev 2014](http://www.mikeware.com/2014/08/you-have-died-of-dysentery-games-in-education-are-still-alive/)
     * [Reach for the Stars - PAXDev 2012](http://www.mikeware.com/2012/09/reach-for-the-stars-educating-the-next-generation-using-games/)
@@ -36,7 +37,7 @@ Space Battle was built against the following versions of libraries:
 * Java Client
     * [Gson 2.2](https://github.com/google/gson)
 * Python Server
-    * [Python 2.7.9](https://www.python.org/downloads/release/python-279/)
+    * [Python 2.7.12](https://www.python.org/downloads/release/python-2712/)
     * [PyMunk 3.0.0](https://pypi.python.org/pypi/pymunk/3.0.0)
     * [PyGame 1.9.1](http://www.pygame.org/download.shtml)
     * [Py2Exe 0.6.9](http://sourceforge.net/projects/py2exe/files/py2exe/0.6.9/) (for server executable build)

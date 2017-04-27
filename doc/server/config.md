@@ -126,12 +126,21 @@ Can a player join the server again if they had connected previously and disconne
 ###disconnect_on_idle = boolean
 Determines if a player's ship should be disconnected if it doesn't issue a command periodically (within 10 seconds of the last command being executed finishing).  **Note:** this will not prevent a ship from disconnecting if the actual socket is detected to be closed.
 
+###enable_commands = string
+Comma separated list of ship commands to enable on the server. All other commands will be disabled.  E.g.
+
+	enable_commands = ThrustCommand,RotateCommand,IdleCommand
+	
+A list of commands can be found in the [Command JavaDoc](http://mikeware.github.io/SpaceBattleArena/client/java_doc/ihs/apcs/spacebattle/commands/package-frame.html). When a command is invoked that has been disabled, it is simply ignored. A message should return to the client, but they will get a new environment and their ship should continue running.  Its state might just not be what was expected.
+
 ###disable_commands = string
 Comma separated list of ship commands to disable on the server.  E.g.
 
 	disable_commands = WarpCommand,FireTorpedoCommand
 	
 A list of commands can be found in the Command chapter. When a command is invoked that has been disabled, it is simply ignored. A message should return to the client, but they will get a new environment and their ship should continue running.  Its state might just not be what was expected.
+
+You should specify either **enable_commands** or **disable_commands** not both.
 
 
 <a name="spawnmanager"></a>Spawn Manager
@@ -161,7 +170,7 @@ Minimum number of [Entity] to keep in the world.  If the number falls below this
 Maximum cut-off for spawning new [Entity] types on the timer.  If the number of objects has reached this level, no new entities will be spawned using the spawn timing settings below. Games or other events may still spawn entities of this type however.
 
 ###spawn_time_num = integer
-Number of entities to spawn at a time with the timing settings below.  If specified, you must also specify the spawn_time_min and spawn_time_max options.
+Number of entities to spawn at a time with the timing settings below.  *If specified, you must also specify the spawn_time_min and spawn_time_max options.*
 
 ###spawn_time_min = integer
 Minimum time in seconds before spawning the spawn_time_num of [Entity] unless spawn_keep_max has been reached.
@@ -180,14 +189,29 @@ Number of [Entity] to add to the universe when a player is added to it.
 ###spawn_on_player_respawn = boolean
 Specify which scenarios (first created in round and/or whenever re-added) to add the spawn_on_player_num [Entity] to the world.
 
+###points_torpedo = int
+Number of points for destroying the spawned entity with a torpedo (if applicable).  *Must specify both points_torpedo and points_ram.*
+
+###points_ram = int
+Number of points for destroying the spawned entity with a ship via ramming (without destroying your ship).
+
+
 <a name="asteroid"></a>[Asteroid]
 ---------------------------------------
 Asteroids are flying debris in space.  They start off with a set amount of momentum and will continue flying in space until impacting ships or destroyed by torpedos.
+
+###move_speed_min = int
+###move_speed_max = int
+Range for the initial speed to start an asteroid's movement.
 
 
 <a name="dragon"></a>[Dragon]
 ---------------------------------------
 Dragons fly around space and will attack (and eat) nearby uncloaked ships.
+
+###move_speed_min = int
+###move_speed_max = int
+Range for the initial speed to start a dragon's movement.
 
 ###range_min = int
 ###range_max = int
@@ -195,7 +219,7 @@ Range for the size of the Dragon's visibility radius.  It will attack ships that
 
 ###attack_speed_min = int
 ###attack_speed_max = int
-Range for the amount of speed a Dragon will increase by when it sees a Ship.
+Range for the amount of speed a Dragon will *increase by* when it sees a Ship.  This is fixed when a Dragon is instantiated.
 
 ###attack_time_min = float
 ###attack_time_max = float

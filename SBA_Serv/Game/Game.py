@@ -198,7 +198,7 @@ class BasicGame(object):
             self.spawnmanager.player_added(reason)
 
     
-    def player_get_start_position(self, force=False):
+    def player_get_start_position(self):
         """
         Should return a position for a player to start at in the world.
         """
@@ -236,7 +236,7 @@ class BasicGame(object):
         for player in self._players:
             player.roundover = True
             if player.object != None:
-                #player.object.destroyed = True
+                player.object.destroyed = True
                 self.world.remove(player.object) # here we're forcibly removing them as we're clearing the game
 
         if self.__resetworldround:
@@ -295,7 +295,7 @@ class BasicGame(object):
             if (self.__started and self.__allowafterstart) or not self.__started:
                 # create new player
                 #
-                p = Player(name, color, imgindex, netid, None)
+                p = Player(name, color, imgindex, netid, self._primary_victory_high)
                 self.player_added(p, BasicGame._ADD_REASON_REGISTER_)
                 self._players[netid] = p
 
@@ -365,11 +365,11 @@ class BasicGame(object):
             self.__aiships[netid].timealive = 0
             self.__aiships[netid].body.velocity = Vec2d(0, 0)
             if not roundstart: # ai ship will be initialized with a starting position for round entry, but if killed, will randomize
-                self.__aiships[netid].body.position = self.player_get_start_position(True)
+                self.__aiships[netid].body.position = self.player_get_start_position()
 
             self._players[netid].object.ship_added() # tell AI ship to start
         else:
-            self._players[netid].object = Ship(self.player_get_start_position(True), self.world)
+            self._players[netid].object = Ship(self.player_get_start_position(), self.world)
         logging.info("Adding Ship for Player %d id #%d with Name %s", netid, self._players[netid].object.id, self._players[netid].name)
         self._players[netid].object.player = self._players[netid]
         self._players[netid].object.owner = self._players[netid].object # Make ships owners of themselves for easier logic with ownership?
@@ -467,21 +467,6 @@ class BasicGame(object):
     #endregion
 
     #region Player Scoring / Leaderboard Functions
-    def player_update_score(self, player, amount):
-        """
-        Should be called to manipulate a player's score, will do extra bookkeeping and sanity for you.
-        """
-        player.score += amount
-
-        # scores can't be negative
-        if player.score < 0:
-            player.score = 0
-
-        # TODO: should probably check if primary highest flag to see if we want to keep track of lowest or highest score here
-        # update if this is a new personal best
-        if player.score > player.bestscore:
-            player.bestscore = player.score
-        
     def player_died(self, player, gone):
         """
         Will be called when a player dies, will adjust score appropriately based on game rules.
@@ -495,7 +480,18 @@ class BasicGame(object):
             logging.info("Player %s Died", player.name)
             player.deaths += 1
             if self._points_lost_on_death > 0:
-                self.player_update_score(player, -self._points_lost_on_death)
+                player.update_score(-self._points_lost_on_death)
+                
+                if self._primary_victory == "bestscore":
+                    # we need to subtract/add to bestscore in stead
+                    if self._primary_victory_high:
+                        player.bestscore -= self._points_lost_on_death
+                        if player.bestscore < 0:
+                            player.bestscore = 0
+                    else:
+                        player.bestscore += self._points_lost_on_death
+                        if player.bestscore > self._points_initial:
+                            player.bestscore = self._points_initial
 
             if self._reset_score_on_death:
                 self._player_reset_score(player)

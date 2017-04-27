@@ -23,7 +23,7 @@ from World.WorldMap import GameWorld
 from ObjWrappers.ShipWrapper import ShipGUI
 from ObjWrappers.NebulaWrapper import NebulaGUI
 from ObjWrappers.PlanetWrapper import PlanetGUI
-from ObjWrappers.AsteroidWrapper import AsteroidGUI
+from ObjWrappers.AsteroidWrapper import AsteroidGUI, DragonGUI
 from ObjWrappers.WormHoleWrapper import WormHoleGUI
 from ObjWrappers.WeaponWrappers import TorpedoGUI, SpaceMineGUI
 from Game.Utils import SpawnManager
@@ -83,6 +83,7 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
         game.gui_initialize()
 
         colorBlack = pygame.Color(0, 0, 0)
+        mt = 0
 
         #shipw = ShipGUI(Ship((100, 100)))
         #shipw.ship.velocity.magnitude = 5
@@ -116,6 +117,10 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
                         logging.debug("GUI: Adding Asteroid #%d", obj.id)
                         objects[obj.id] = AsteroidGUI(obj, world)
                         logging.debug("GUI: Added Asteroid #%d", obj.id)
+                    elif isinstance(obj, Dragon):
+                        logging.debug("GUI: Adding Dragon #%d", obj.id)
+                        objects[obj.id] = DragonGUI(obj, world)
+                        logging.debug("GUI: Added Dragon #%d", obj.id)
                     elif isinstance(obj, Torpedo):
                         logging.debug("GUI: Adding Torpedo #%d", obj.id)
                         objects[obj.id] = TorpedoGUI(obj, world)
@@ -148,6 +153,7 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
                 #eif
             except:
                 logging.error("GUI ERROR")
+                logging.info(traceback.format_exc())
                 logging.error(traceback.format_exc())
                 print traceback.format_exc()
             #logging.debug("GUI: Add/Remove Done [%d]", thread.get_ident())
@@ -205,7 +211,8 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
         flags = {"DEBUG":False,
                  "STATS":cfg.getboolean("Application", "showstats"),
                  "NAMES":True,
-                 "GAME":cfg.getboolean("Application", "showstats")}
+                 "GAME":cfg.getboolean("Application", "showstats"),
+                 "THREADS":False}
     
         logging.info("Create Main Surface...")
         #TODO: Optimize by only drawing objects in viewport...
@@ -309,6 +316,8 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
                         offsetx += 16
                     elif event.key == K_g:
                         flags["GAME"] = not flags["GAME"]
+                    elif event.key == K_h:
+                        flags["THREADS"] = not flags["THREADS"]
                     elif event.key == K_t and game.tournament_is_running():
                         tournamentinfo = not tournamentinfo
                     elif event.key == K_z:
@@ -403,10 +412,19 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
                         if event.button != 2:
                             mousemode = None
                         world.causeExplosion((x, y), 256, 1000)
-                    elif mousemode != None and  mousemode.startswith("Add"):
+                    elif mousemode != None and mousemode.startswith("Add"):
                         game.spawnmanager.spawn_entity(mousemode[3:], (x, y), False)
                         if event.button != 2:
                             mousemode = None
+                    elif trackplayer != None:
+                        v = Vec2d(x, y)
+                        for obj in objects:
+                            if isinstance(obj, ShipGUI) and math.sqrt(obj._worldobj.body.position.get_dist_sqrd(v)) <= 32:
+                                logging.info("[GUI] Click Tracking Object #%d", obj._worldobj.id)
+                                trackplayer = obj._worldobj.player
+                                zoomout = False
+                                dynamiccamera = False
+                                break
                     elif zoomout and event.button == 1:
                         # zoom in
                         zoomout = False
@@ -616,6 +634,31 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
             elif mousemode == "Move":
                 ip = bigfont.render("CLICK TO MOVE "+trackplayer.name, False, (255, 255, 255))
                 windowSurface.blit(ip, (resolution[0]/2-ip.get_width()/2, resolution[1]/2-ip.get_height()/2))        
+
+            if flags["THREADS"]:
+                st = mt+1
+                rt = st
+                mt = 0
+                thrs = threading.enumerate()
+                thrs.sort(key=lambda x: x.name, reverse=True)
+                for thr in thrs:
+                    s = repr(thr)
+                    c = (192, 192, 192)
+                    ind = 30
+                    if "Receiving" in s:
+                        i = rt
+                        rt += 1
+                        c = (192, 192, 255)
+                        ind = resolution[0]/2 + 30
+                    elif "Sending" in s:
+                        i = st
+                        st += 1
+                    else:
+                        i = mt
+                        mt += 1
+                        c = (255, 192, 192)
+
+                    windowSurface.blit(font.render(repr(thr), False, c), (ind, 64 + 12*i))
 
             pygame.display.update()
             fpsClock.tick(30) # keep in sync with physics engine?
