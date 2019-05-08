@@ -1,7 +1,7 @@
 """
 Space Battle Arena is a Programming Game.
 
-Copyright (C) 2012-2016 Michael A. Hawker and Brett Wortzman
+Copyright (C) 2012-2018 Michael A. Hawker and Brett Wortzman
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 
@@ -13,9 +13,9 @@ The full text of the license is available online: http://opensource.org/licenses
 """
 
 __author__ = "Michael A. Hawker"
-__copyright__ = "Copyright 2012-2016 Mikeware"
+__copyright__ = "Copyright 2012-2018 Mikeware"
 __license__ = "GPLv2"
-__version__ = "1.2.0." + open("buildnum").read()
+__version__ = "1.3.0." + open("buildnum").read()
 __email__ = "questions@mikeware.com"
 __status__ = "Production"
 
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     from ConfigParser import ConfigParser
 
     from GUI.GraphicsCache import Cache
+    from GUI.Helpers import detect_resolution
 
     parser = OptionParser(usage="Usage: %prog [options] [config_file] [more_config_files...]\n\nYou should pass at least one config file to the server. Additional config files will override/add to the options in the base file.")
     parser.add_option("-n", "--nolog", action="store_true", dest="nolog", default=False,
@@ -114,10 +115,7 @@ if __name__ == "__main__":
         if width.find("x") != -1 or height.find("x") != -1:
             if resolution == None:
                 logging.info("Detecting Resolution...")
-                import pygame
-                pygame.display.init()
-                resolution = pygame.display.list_modes()[0]
-                logging.info("Using Resolution %s", repr(resolution))
+                resolution = detect_resolution(cfg)
 
             if width.find("x") != -1:
                 cfg.set("World", "width", str(int(resolution[0] * float(width.replace("x",""))))) # as per doc, need to cast back to store as string, will unbox as int again later
@@ -165,7 +163,7 @@ if __name__ == "__main__":
             #TODO: Set World Size Here?
         #else:
         #startGame(title, game, fullscreen:bool, (xres, yres), showstats:bool, sound:bool)
-        main.startGame(titlever + title_game, game, cfg.getboolean("Application", "fullscreen"), resolution, cfg)
+        main.startGame(titlever + title_game, game, cfg.get("Application", "fullscreen"), resolution, cfg)
 
         print "Sending Disconnect..."
         logging.info("Server Request Disconnect All")

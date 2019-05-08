@@ -438,7 +438,6 @@ class ServerGUITwoShipRemoteTestCase(SBAGUIWithServerTestCase):
     def get_config_filename(self):
         return "test_server.cfg"
 
-    # TODO: Expected Failure - Issue #112
     def test_add_two_ships_and_disconnect(self):
         """
         Tests adding two networked clients to a server and that they can disconnect
@@ -478,7 +477,7 @@ class ServerGUITwoShipRemoteTestCase(SBAGUIWithServerTestCase):
 
         self._endServer() # Note, Ship will still be visible as we're not removing it from world in this test.
 
-        time.sleep(0.5)
+        time.sleep(2)
 
         self.assertFalse(self.targetship.isconnected(), "Target Client still connected to server after disconnect.")
         self.assertFalse(self.radarship.isconnected(), "Radar Client still connected to server after disconnect.")
@@ -563,8 +562,8 @@ class ServerGUITournamentRemoteTestCase(SBAGUIWithServerTestCase):
                 self.assertIn(leader, self.game._tmanager._finalgroup, "Correct player not added to final group")
             else:
                 # final round
-                self.assertIsNotNone(self.game._tmanager._finalwinner, "Final Winner not marked")
-                self.assertEqual(self.game._tmanager._finalwinner, leader, "Incorrect leader chosen")
+                self.assertIsNotNone(self.game._tmanager._finalwinners, "Final Winner not marked")
+                self.assertIn(leader, self.game._tmanager._finalwinner, "Incorrect leader chosen")
                 pass
             #eif
         #next round

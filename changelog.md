@@ -1,3 +1,27 @@
+v1.3.0.???? : ??/??/2018 - Oct 2018 [Give Tournament] - The Return of Discovery Quest
+----
+* Allowed **Discovery Quest** scans to reset over time.
+* Added **Constellations** (mostly decorations, though can be mined for Energy)
+* Added **Quasars** (dangerous celestial body which will prevent energy recovery, drain shield, and prevent shield usage)
+* Ships can no longer be detected in **Nebulas** with Radar.
+* Improved hi-resolution Display Support
+
+v1.2.0.1127 : 06/04/2017 - May 2017 Season 6 - Hotfix #2
+----
+* Fixed Issue with **Bauble Hunt** allowing depositing baubles into ANY base!
+* Tweaked BaubleHunt stat display to show weight of baubles carried at end.
+* Tournament will show all tied winners at the very end now.
+* Added fixes for behaving properly with non-100% DPI settings.
+* Added support for borderless fullscreen windows.
+* Fixed some test cases.
+
+v1.2.0.1126 : 05/14/2017 - May 2017 [Season 6 Kickoff Hotfix Release] - The Return of Bauble Hunt
+----
+* Fixed Issue with **Bauble Hunt** automatically starting.
+* Added new config for **Discovery Quest** to turn off home base registration and/or missions to make it easier to use as a non-final mission.
+* ***Improved Client Package Performance*** (should no longer peg CPU).
+* Cleaned-up server socket disconnects.
+
 v1.2.0.1125 : 01/18/2017 - May 2016 [Season 5 Release] - The Hunger Baubles
 ----
 * Added **The Hunger Baubles** Subgame

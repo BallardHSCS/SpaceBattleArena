@@ -13,6 +13,7 @@ The full text of the license is available online: http://opensource.org/licenses
 """
 
 import pygame, sys, random, logging, math, datetime
+import os, ctypes
 from collections import deque
 from pygame.locals import *
 from operator import attrgetter
@@ -28,15 +29,26 @@ from ObjWrappers.WormHoleWrapper import WormHoleGUI
 from ObjWrappers.WeaponWrappers import TorpedoGUI, SpaceMineGUI
 from Game.Utils import SpawnManager
 from GraphicsCache import Cache
-from World.WorldEntities import Ship, Planet, Asteroid, Torpedo, SpaceMine, BlackHole, Nebula, Star, Dragon, WormHole
+from World.WorldEntities import Ship, Planet, Asteroid, Torpedo, SpaceMine, BlackHole, Nebula, Star, Dragon, WormHole, Constellation
 from Server.MWNL2 import getIPAddress
 from pymunk import Vec2d
-from Helpers import infofont
+from Helpers import infofont, detect_resolution
 from ThreadStuff.ThreadSafe import ThreadSafeDict
 import threading, thread, traceback
 from SoundCache import SCache
 
 STAR_DENSITY = 75 # Higher = Less Stars
+
+def str2bool(value):
+    if isinstance(value, bool):
+        return value
+
+    value = value.lower().strip()
+    if value in ["true", "on", "yes", "1"]:
+        return True
+    elif value in ["false", "off", "no", "0"]:
+        return False
+    return value
 
 class MessageLogHandler(logging.Handler):
     def __init__(self, maxmessages=20):
@@ -73,9 +85,18 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
         ipaddress = getIPAddress()
 
         if resolution == None:
-            resolution = pygame.display.list_modes()[0]
+            resolution = detect_resolution(cfg)
 
-        windowSurface = pygame.display.set_mode(resolution, (pygame.FULLSCREEN * fullscreen) | pygame.HWSURFACE | pygame.DOUBLEBUF)
+        fullscreen = str2bool(fullscreen)
+        if fullscreen in [True, False]:
+            windowSurface = pygame.display.set_mode(resolution, (pygame.FULLSCREEN * fullscreen) | pygame.HWSURFACE | pygame.DOUBLEBUF)
+        elif fullscreen == "window":
+            os.environ['SDL_VIDEO_WINDOW_POS'] = '0,0'
+            windowSurface = pygame.display.set_mode(resolution, pygame.NOFRAME | pygame.HWSURFACE | pygame.DOUBLEBUF)
+            os.environ['SDL_VIDEO_WINDOW_POS'] = '' # Reset back
+        else:
+            raise ValueError("Invalid Fullscreen Windowing Mode")
+
         pygame.display.set_caption(windowcaption)
 
         logging.debug("Game GUI CFG...")
@@ -105,7 +126,7 @@ def startGame(windowcaption, game, fullscreen=True, resolution=None, cfg=None, t
                         logging.debug("GUI: Adding Nebula #%d", obj.id)
                         bgobjects[obj.id] = NebulaGUI(obj, world)
                         logging.debug("GUI: Added Nebula #%d", obj.id)
-                    elif isinstance(obj, Planet):
+                    elif isinstance(obj, Planet) or isinstance(obj, Constellation):
                         logging.debug("GUI: Adding Planet #%d", obj.id)
                         bgobjects[obj.id] = PlanetGUI(obj, world)
                         logging.debug("GUI: Added Planet #%d", obj.id)

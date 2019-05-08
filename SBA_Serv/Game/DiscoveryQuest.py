@@ -48,9 +48,12 @@ class DiscoveryQuestGame(BasicGame):
 
         super(DiscoveryQuestGame, self).__init__(cfgobj)
 
+        self.mustbase = cfgobj.getboolean("DiscoveryQuest", "establish_homebase")
+        self.usemissions = cfgobj.getboolean("DiscoveryQuest", "missions")
         self._missions = cfgobj.get("DiscoveryQuest", "mission_objectives").split(",")
         self.scantime = cfgobj.getfloat("DiscoveryQuest", "scan_time")
         self.scanrange = cfgobj.getint("DiscoveryQuest", "scan_range")
+        self.scanduration = cfgobj.getint("DiscoveryQuest", "scan_duration")
         self.outpostdist = cfgobj.getint("DiscoveryQuest", "ship_spawn_dist")
         self.limitwarp = cfgobj.getboolean("DiscoveryQuest", "disable_warp_in_nebula")
 
@@ -58,22 +61,24 @@ class DiscoveryQuestGame(BasicGame):
         return {"GAMENAME": "DiscoveryQuest"}
 
     def player_reset_mission(self, player):
-        # get a number of missions for each thing
-        player.mission = []
-        player.scanned = []
-        player.failed = False
-        for i in xrange(cfg_rand_min_max(self.cfg, "DiscoveryQuest", "mission_num")):
-            player.mission.append(random.choice(self._missions)) # TODO: validate that this player can still scan those types of objects
+        if self.usemissions:
+            # get a number of missions for each thing
+            player.mission = []
+            player.scanned = []
+            player.failed = False
+            for i in xrange(cfg_rand_min_max(self.cfg, "DiscoveryQuest", "mission_num")):
+                player.mission.append(random.choice(self._missions)) # TODO: validate that this player can still scan those types of objects
 
     def player_added(self, player, reason):
         if reason == BasicGame._ADD_REASON_REGISTER_:
-            player.buffervalue = 0
-            player.outpost = None
-            player.lastids = []
+            player.buffervalue = 0 # stored points before scanning first output, if outpost is required.
+            player.outpost = None # home base obj
+            player.lastids = [] # last ids scanned
+            player.scantimes = {} # timers for scans, id: timestamp
             
-        player.mission = []
-        player.scanned = []
-        player.failed = True
+        player.mission = [] # List of strings of items to scan
+        player.scanned = [] # ids scanned by player
+        player.failed = True # whether current mission has failed, starts as true as no mission to start
 
         return super(DiscoveryQuestGame, self).player_added(player, reason)
 
@@ -129,6 +134,14 @@ class DiscoveryQuestGame(BasicGame):
             opt = "points_" + friendly_type(wobj).lower()
             if self.cfg.has_option("DiscoveryQuest", opt):
                 wobj.value = self.cfg.getint("DiscoveryQuest", opt)
+            else:
+                #guard
+                wobj.value = 0
+        else:
+            # clean-up reference to scantime on obj death
+            for player in self.game_get_current_player_list():
+                if player in wobj.scanned_by:
+                    del player.scantimes[wobj.id]
 
         return super(DiscoveryQuestGame, self).world_add_remove_object(wobj, added)
 
@@ -182,7 +195,6 @@ class DiscoveryQuestGame(BasicGame):
 
     def server_process_command(self, ship, command):
         # Discovery Quest prevents warp in a nebula
-        #logging.info("Checking Command %s %s", repr(command), repr(ship.in_celestialbody))
         if self.limitwarp and isinstance(command, WarpCommand):
             for body in ship.in_celestialbody:
                 if isinstance(body, Nebula):
@@ -210,7 +222,7 @@ class DiscoveryQuestGame(BasicGame):
                     ship.player.buffervalue = 0
                     ship.player.sound = "SUCCESS"
                 
-                if not ship.player.failed and len(ship.player.mission) == 0: # completed mission exactly
+                if self.usemissions and not ship.player.failed and len(ship.player.mission) == 0: # completed mission exactly
                     points = 0
                     # tally points of scanned objects
                     for obj in ship.player.scanned:
@@ -230,14 +242,31 @@ class DiscoveryQuestGame(BasicGame):
                     ship.player.failed = True
                 ship.player.scanned.append(obj)
 
-                # update scores
+                # track obj scan
+                ship.player.scantimes[obj.id] = 0
                 obj.scanned_by.append(ship.player)
+
+                # update scores
                 ship.player.sound = "SUCCESS"
-                if ship.player.outpost != None:                    
+                if ship.player.outpost != None or not self.mustbase: # or we don't require bases for points
                     ship.player.update_score(obj.value)
                 else: #haven't found outpost, need to buffer points
                     ship.player.buffervalue += obj.value
     #end dq_finished_scan
+
+    def game_update(self, t):
+        super(DiscoveryQuestGame, self).game_update(t)
+
+        # check timeout of scan duration (if enabled)
+        if self.scanduration > 0:
+            for player in self.game_get_current_player_list():
+                for id in player.scantimes.keys():
+                    player.scantimes[id] += t                    
+                    if player.scantimes[id] >= self.scanduration:
+                        obj = self.world[id]
+                        obj.scanned_by.remove(player)
+                        del player.scantimes[id]
+    #end game_update
 
     def gui_draw_game_world_info(self, surface, flags, trackplayer):
         for player in self.game_get_current_player_list():
@@ -245,28 +274,34 @@ class DiscoveryQuestGame(BasicGame):
             if obj != None:
                 bp = intpos(obj.body.position)
                 wrapcircle(surface, (0, 255, 255), bp, self.scanrange, self.world.size, 1) # Scan Range
-                text = debugfont().render("%s [%s]" % (repr(player.mission), player.failed), False, (0, 255, 255))
-                surface.blit(text, (bp[0]-text.get_width()/2, bp[1] - 6))
+                if self.usemissions:
+                    text = debugfont().render("%s [%s]" % (repr(player.mission), player.failed), False, (0, 255, 255))
+                    surface.blit(text, (bp[0]-text.get_width()/2, bp[1] - 6))
 
         if trackplayer != None:
             curs = []
             curf = []
             obj = trackplayer.object
             if obj != None:
+                # Draw Success/Failure Circles around Current Scan Targets
                 for cmd in obj.commandQueue:
                     if isinstance(cmd, ScanCommand):
                         if cmd.success:
-                            curs.append(cmd.target)
+                            obj = self.world[cmd.target]
+                            wrapcircle(surface, (255, 255, 0), intpos(obj.body.position), obj.radius + 6, self.world.size, 2)
                         else:
-                            curf.append(cmd.target)
+                            obj = self.world[cmd.target]
+                            wrapcircle(surface, (255, 0, 0), intpos(obj.body.position), obj.radius + 6, self.world.size, 2)
 
-            for obj in self.world:
-                if trackplayer in obj.scanned_by:
-                    wrapcircle(surface, (0, 255, 255), intpos(obj.body.position), obj.radius + 4, self.world.size, 4)
-                if obj.id in curs:
-                    wrapcircle(surface, (255, 255, 0), intpos(obj.body.position), obj.radius + 5, self.world.size, 2)
-                elif obj.id in curf:
-                    wrapcircle(surface, (255, 0, 0), intpos(obj.body.position), obj.radius + 5, self.world.size, 2)
+            # Draw Circles around scanned entities
+            for id, scantime in trackplayer.scantimes.iteritems():
+                obj = self.world[id]
+                #if trackplayer in obj.scanned_by:
+                if self.scanduration > 0:
+                    c = 160 * (scantime / self.scanduration)
+                else:
+                    c = 0
+                wrapcircle(surface, (0, 255 - c, 255 - c), intpos(obj.body.position), obj.radius + 4, self.world.size, 4)                    
 
 class ScanCommand(Command):
     """
